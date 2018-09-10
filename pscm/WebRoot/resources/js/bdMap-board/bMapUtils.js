@@ -1,6 +1,12 @@
 var map = null;
 var webPath = "/" + window.location.pathname.split("/")[1];
 const icon_none = new BMap.Icon(webPath + "/resources/img/index/xunjian.png", new BMap.Size(0,0))
+
+var dataContainer = {
+    sectionList : null,
+    drawPolyLineMap: {},
+}
+
 function initMap(){
     map = new BMap.Map("container", {enableMapClick: false});
     map.centerAndZoom(new BMap.Point(114.341823, 22.713299), 15);
@@ -24,6 +30,10 @@ function BD_getMarker(point, lableTitle) {
     return marker;
 }
 
+function BD_viewport(sectionId){
+    if(dataContainer.drawPolyLineMap[sectionId])
+        map.setViewport(dataContainer.drawPolyLineMap[sectionId].getPath());
+}
 
 //像素转坐标点
 function mapPixelToPoint(pixel){

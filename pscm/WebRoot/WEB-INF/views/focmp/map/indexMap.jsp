@@ -8,7 +8,21 @@
     <title>地图首页</title>
     <link rel="stylesheet" href="${_pluginPath}/bootstrap/css/bootstrap.min-3.3.7.css"/>
     <link rel="stylesheet" href="${_cssPath}/map/mapIndex-leftBar.css"/>
+    <style type="text/css">
+        .result-box {width: 100%;padding: 7px;cursor: pointer;border-top: 1px solid #EEEEEE;}
+        .cable-img {display: inline-block; font-size: 20px;color: #0091ff;width: 12%;padding-top: 3px;}
+        .cable-info {display: inline-block}
+        .badge {background-color: #0091ff;color: white}
+        .result-box:hover{background-color: #CCCCCC;border: 1px solid #0091ff;}
 
+        #cablecontent>div {display: inline-block;padding: 4px;}
+        .existedhazard {padding: 5px;background-color: #eeeeee;font-weight: bold;border-bottom: 1px solid #CCCCCC;}
+        .linelist .sectioncontent {width: 100%;padding: 4px;cursor: pointer;}
+        .linelist .sectioncontent>div {display: inline-block;padding: 4px;vertical-align: middle;}
+        .linelist .sectioncontent:hover{background-color: #CCCCCC;border: 1px solid #0091ff;}
+        .back{color:#3A3A3A;cursor: pointer;}
+        .back:hover{color: #0091ff;}
+    </style>
     <script src="${_jsPath}/jquery.min.js"></script>
     <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=OmG5K7LIT4ceCCiqIZ4AG7XZ"></script>
 
@@ -16,13 +30,73 @@
 <body>
 <input type="hidden" id="sectionId" value="${sectionId}"/>
 <input type="hidden" id="cableId" value="${cableId}"/>
+<%------------------模版--------------------%>
+<%--左侧光缆段选择列表--%>
+<div class="result-box" title="点击查看" id="template_cableItem" style="display: none;">
+    <div class="cable-img"><span class="badge" name="index"></span></div>
+    <div class="cable-info"><div name="name"></div></div>
+</div>
+<%--左侧光缆详情里面 光缆段列表--%>
+<div class="sectioncontent" title="点击查看" id="template_sectionItem" style="display: none;">
+    <div class="sectionname col-width-10" name="sectionName"></div>
+    <div class="col-width-2">敷设：</div><div class="erectiontype col-width-3" name="method"></div>
+    <div class="col-width-2">长度：</div><div class="length col-width-3" name="length"></div>
+</div>
 <!-- 地图容器 -->
 <div id="container"></div>
 <div id="leftbar" class="leftbar">
-    <div id="querysectionInfo" class="info-box">
+    <%--光缆列表--%>
+    <div name="mainInfoDiv" id="sectionInfoListDiv" class="info-box" style="">
+        <div class="info-header">
+            <span class="glyphicon glyphicon-stats" style="color: #0091ff;"></span>
+            <span>光缆查询</span>
+        </div>
+        <div class="info-content">
+            <div class="input-group">
+                <input type="text" id="sectionInfoListDiv_cableName" class="form-control" placeholder="输入光缆名称">
+                <span class="input-group-btn">
+			      	<button class="btn btn-info" type="button" id="searchCableBtn" style="font-size: 20px;"><i class="glyphicon glyphicon-search"></i></button>
+                </span>
+            </div>
+            <div class="tab-content" style="padding-top: 16px;">
+                <div role="tabpanel" class="tab-pane active body-tab">
+                    <div id="sectionList_contentScroll" class="content-scroll"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <%--光缆信息--%>
+    <div name="mainInfoDiv" id="cableInfoDiv" class="info-box" style="display: none;">
+        <div class="info-header">
+            <span class="glyphicon glyphicon-stats" style="color: #0091ff;"></span>
+            <span>光缆信息</span>
+            <div class="back pull-right" onclick="leftBar_showQueryInfo();">
+                <span>返回查询</span>
+            </div>
+        </div>
+        <div class="info-content">
+            <div id="cablecontent">
+                <div class="col-width-3">光缆名称：</div><div id="cableInfoDiv_cableName" class="col-width-7">广州海口架空光缆</div>
+                <div class="col-width-3">光缆等级：</div><div id="cableInfoDiv_level" class="col-width-7">一干</div>
+            </div>
+            <div class="existedhazard">光缆段</div>
+            <div class="scrollbox">
+                <div class="contentbox">
+                    <div class="linelist" id="cableInfoDiv_sectionList">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <%--光缆段信息--%>
+    <div name="mainInfoDiv" id="sectionInfoDiv" class="info-box" style="display: none;">
         <div class="info-header">
             <span class="glyphicon glyphicon-stats" style="color: #0091ff;"></span>
             <span>光缆段信息</span>
+            <div class="back pull-right" onclick="leftBar_showQueryInfo();">
+                <span>返回查询</span>
+            </div>
         </div>
         <div class="info-content">
             <div id="sectioncontent">
@@ -44,8 +118,8 @@
     </div>
 </div>
 </body>
-<script src="${_jsPath}/bdMap-board/leftBar.js"></script>
 <script src="${_jsPath}/bdMap-board/getData.js"></script>
+<script src="${_jsPath}/bdMap-board/leftBar.js"></script>
 <script src="${_jsPath}/bdMap-board/bMapUtils.js"></script>
 <!-- 自定义的js -->
 <script type="text/javascript">
@@ -70,6 +144,8 @@
             changeLeftBarInfo(e.target.extData)
             openLeftBar();
         });
+        if(data.sectionId)
+            dataContainer.drawPolyLineMap[data.sectionId] = polyline;
         map.addOverlay(polyline);
     }
 
@@ -84,18 +160,18 @@
         olpHtml +=    '</div>';
         return new BMap.InfoWindow(olpHtml, infoWindowOpt);
     }
-    function changeLeftBarInfo(data) {
-        for (let index in data){
-            $("#left-bar-" + index).html(data[index]);
-        }
-    }
+
 
     function queryDrawSections(data){
         data = eval(data);
+        dataContainer.sectionList = data;
+        leftBar_showCableSectionList(data);
         for(let i = 0; i < data.length; i++){
             let cableSection = data[i];
             let path = getPathByNodes(cableSection.nodes);
             drawSection(path, {
+                cableId : cableSection.cableId,
+                sectionId: cableSection.sectionId,
                 cableName: cableSection.cableName,
                 sectionName: cableSection.sectionName,
                 code: "L05.PSH00-DAGYQ/ZGG01/01",
