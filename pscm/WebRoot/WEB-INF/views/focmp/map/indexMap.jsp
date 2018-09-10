@@ -136,6 +136,7 @@
     });
 
     function drawSection(path, data) {
+        console.log("this is my test")
         let polyline = BD_getPolyline(path, 'blue', 6, .5);
         polyline.extData = data;
         let infoWindow = getSectionWindowInfo(data);
